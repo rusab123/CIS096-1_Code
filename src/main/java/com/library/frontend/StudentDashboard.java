@@ -117,7 +117,7 @@ public class StudentDashboard extends BaseScreen {
         VBox userInfo = new VBox(5);
         Text userName = new Text("Student: " + currentStudent.getName());
         Text userDept = new Text("Department: " + currentStudent.getDepartment());
-        Text booksQuota = new Text("Books Quota: " + currentStudent.getRemainingBookQuota() + " remaining");
+        Text booksQuota = new Text("Books Quota: 1");
         userInfo.getChildren().addAll(userName, userDept, booksQuota);
         
         // Add components to header

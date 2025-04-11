@@ -31,6 +31,7 @@ public abstract class BaseScreen {
      * This should be called after any necessary services are initialized
      */
     protected void initialize() {
+        System.out.println("BaseScreen: initialize() called");
         setupUI();
     }
     

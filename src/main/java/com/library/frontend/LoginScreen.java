@@ -105,15 +105,8 @@ public class LoginScreen extends BaseScreen {
         VBox demoBox = new VBox(10);
         demoBox.setPadding(new Insets(20, 0, 0, 0));
         demoBox.setAlignment(Pos.CENTER);
-        
-        Text demoTitle = new Text("Demo Credentials");
-        demoTitle.setFont(Font.font("Tahoma", FontWeight.BOLD, 14));
-        
-        Text adminCred = new Text("Admin: admin@library.com / admin123");
-        Text studentCred = new Text("Student: john@university.edu / pass123");
-        Text teacherCred = new Text("Teacher: johnson@university.edu / prof123");
-        
-        demoBox.getChildren().addAll(demoTitle, adminCred, studentCred, teacherCred);
+
+
         
         // Create main layout and add components
         VBox mainLayout = new VBox(20);

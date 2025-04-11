@@ -1,108 +1,199 @@
 package com.library.backend;
 
+import com.library.backend.database.DbConnection;
 import com.library.models.Book;
 
+import java.sql.*;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
-/**
- * Service to handle book-related operations
- * Implemented using the Singleton pattern
- */
 public class BookService {
     private static BookService instance;
-    private final Map<String, Book> books;
-    
-    // Private constructor to prevent direct instantiation
+
     private BookService() {
-        books = new HashMap<>();
-        initializeDefaultBooks();
+        // Optional: Seed default books if needed
     }
-    
-    // Static method to get the singleton instance
+
     public static synchronized BookService getInstance() {
         if (instance == null) {
             instance = new BookService();
         }
         return instance;
     }
-    
-    private void initializeDefaultBooks() {
-        // Add some default books
-        Book book1 = new Book("Introduction to Java Programming", "John Smith", "978-0-12-345678-9", "Programming", 5);
-        Book book2 = new Book("Data Structures and Algorithms", "Jane Doe", "978-0-98-765432-1", "Computer Science", 3);
-        Book book3 = new Book("The Great Gatsby", "F. Scott Fitzgerald", "978-3-16-148410-0", "Fiction", 2);
-        Book book4 = new Book("Physics for Scientists and Engineers", "Raymond A. Serway", "978-1-23-456789-0", "Science", 4);
-        Book book5 = new Book("Calculus: Early Transcendentals", "James Stewart", "978-9-87-654321-0", "Mathematics", 3);
-        
-        books.put(book1.getId(), book1);
-        books.put(book2.getId(), book2);
-        books.put(book3.getId(), book3);
-        books.put(book4.getId(), book4);
-        books.put(book5.getId(), book5);
-    }
-    
+
     public Book addBook(Book book) {
-        books.put(book.getId(), book);
-        return book;
+        String sql = "INSERT INTO books(id, title, author, isbn, category, quantity, available) VALUES(?,?,?,?,?,?,?)";
+
+        try (Connection conn = DbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, book.getId());
+            pstmt.setString(2, book.getTitle());
+            pstmt.setString(3, book.getAuthor());
+            pstmt.setString(4, book.getIsbn());
+            pstmt.setString(5, book.getCategory());
+            pstmt.setInt(6, book.getQuantity());
+            pstmt.setBoolean(7, book.isAvailable());
+
+            pstmt.executeUpdate();
+            return book;
+        } catch (SQLException e) {
+            System.err.println("Error adding book: " + e.getMessage());
+            return null;
+        }
     }
-    
+
     public Optional<Book> getBookById(String id) {
-        return Optional.ofNullable(books.get(id));
+        String sql = "SELECT * FROM books WHERE id = ?";
+        try (Connection conn = DbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, id);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                return Optional.of(mapResultSetToBook(rs));
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching book: " + e.getMessage());
+        }
+        return Optional.empty();
     }
-    
+
     public List<Book> getAllBooks() {
-        return new ArrayList<>(books.values());
+        List<Book> books = new ArrayList<>();
+        String sql = "SELECT * FROM books";
+
+        try (Connection conn = DbConnection.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                books.add(mapResultSetToBook(rs));
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching books: " + e.getMessage());
+        }
+
+        return books;
     }
-    
+
     public List<Book> getBooksByCategory(String category) {
-        return books.values().stream()
-                .filter(book -> book.getCategory().equalsIgnoreCase(category))
-                .collect(Collectors.toList());
+        List<Book> books = new ArrayList<>();
+        String sql = "SELECT * FROM books WHERE category = ?";
+
+        try (Connection conn = DbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, category);
+            ResultSet rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                books.add(mapResultSetToBook(rs));
+            }
+        } catch (SQLException e) {
+            System.err.println("Error filtering books: " + e.getMessage());
+        }
+
+        return books;
     }
-    
+
     public List<Book> searchBooks(String query) {
-        String searchQuery = query.toLowerCase();
-        
-        return books.values().stream()
-                .filter(book -> 
-                    book.getTitle().toLowerCase().contains(searchQuery) ||
-                    book.getAuthor().toLowerCase().contains(searchQuery) ||
-                    book.getCategory().toLowerCase().contains(searchQuery) ||
-                    book.getIsbn().toLowerCase().contains(searchQuery))
-                .collect(Collectors.toList());
+        List<Book> books = new ArrayList<>();
+        String sql = "SELECT * FROM books WHERE LOWER(title) LIKE ? OR LOWER(author) LIKE ? OR LOWER(category) LIKE ? OR LOWER(isbn) LIKE ?";
+        String search = "%" + query.toLowerCase() + "%";
+
+        try (Connection conn = DbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            for (int i = 1; i <= 4; i++) {
+                pstmt.setString(i, search);
+            }
+
+            ResultSet rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                books.add(mapResultSetToBook(rs));
+            }
+        } catch (SQLException e) {
+            System.err.println("Error searching books: " + e.getMessage());
+        }
+
+        return books;
     }
-    
+
     public boolean updateBook(Book book) {
-        if (books.containsKey(book.getId())) {
-            books.put(book.getId(), book);
-            return true;
+        String sql = "UPDATE books SET title=?, author=?, isbn=?, category=?, quantity=?, available=? WHERE id=?";
+
+        try (Connection conn = DbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, book.getTitle());
+            pstmt.setString(2, book.getAuthor());
+            pstmt.setString(3, book.getIsbn());
+            pstmt.setString(4, book.getCategory());
+            pstmt.setInt(5, book.getQuantity());
+            pstmt.setBoolean(6, book.isAvailable());
+            pstmt.setString(7, book.getId());
+
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error updating book: " + e.getMessage());
+            return false;
         }
-        return false;
     }
-    
+
     public boolean deleteBook(String id) {
-        return books.remove(id) != null;
+        String sql = "DELETE FROM books WHERE id=?";
+
+        try (Connection conn = DbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, id);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error deleting book: " + e.getMessage());
+            return false;
+        }
     }
-    
+
     public boolean borrowBook(String bookId) {
-        Book book = books.get(bookId);
-        if (book != null && book.isAvailable()) {
-            return book.decreaseQuantity();
+        String sql = "UPDATE books SET quantity = quantity - 1, available = quantity - 1 > 0 WHERE id = ? AND quantity > 0";
+
+        try (Connection conn = DbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, bookId);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error borrowing book: " + e.getMessage());
+            return false;
         }
-        return false;
     }
-    
+
     public boolean returnBook(String bookId) {
-        Book book = books.get(bookId);
-        if (book != null) {
-            book.increaseQuantity();
-            return true;
+        String sql = "UPDATE books SET quantity = quantity + 1, available = TRUE WHERE id = ?";
+
+        try (Connection conn = DbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, bookId);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error returning book: " + e.getMessage());
+            return false;
         }
-        return false;
     }
-} 
+
+    private Book mapResultSetToBook(ResultSet rs) throws SQLException {
+        return new Book(
+                rs.getString("id"),
+                rs.getString("title"),
+                rs.getString("author"),
+                rs.getString("isbn"),
+                rs.getString("category"),
+                rs.getInt("quantity"),
+                rs.getBoolean("available")
+        );
+    }
+}

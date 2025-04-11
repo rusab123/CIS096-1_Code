@@ -1,78 +1,86 @@
 package com.library.models;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
-/**
- * Represents a student user in the library system
- */
 public class Student extends User {
     private String studentId;
     private String department;
-    private final List<String> borrowedBooks;
-    private static final int MAX_BOOKS_ALLOWED = 3;
-    
+    private Set<String> borrowedBooks;  // A set to store borrowed book IDs
+
+    // Constructor for new Student (id will be set later, such as from DB after insertion)
     public Student(String name, String email, String password, String studentId, String department) {
-        super(name, email, password);
+        super(null, name, email, password);  // id is set as null for now, it will be updated after DB insertion
         this.studentId = studentId;
         this.department = department;
-        this.borrowedBooks = new ArrayList<>();
+        this.borrowedBooks = new HashSet<>();
     }
-    
-    public String getStudentId() {
-        return studentId;
-    }
-    
-    public void setStudentId(String studentId) {
+
+    // Constructor for loading from DB
+    public Student(String id, String name, String email, String password, String studentId, String department) {
+        super(id, name, email, password);  // Use the constructor with 4 arguments where ID is provided by DB
         this.studentId = studentId;
-    }
-    
-    public String getDepartment() {
-        return department;
-    }
-    
-    public void setDepartment(String department) {
         this.department = department;
+        this.borrowedBooks = new HashSet<>();
     }
-    
-    public List<String> getBorrowedBooks() {
-        return new ArrayList<>(borrowedBooks);
-    }
-    
-    public boolean canBorrowBooks() {
-        return borrowedBooks.size() < MAX_BOOKS_ALLOWED;
-    }
-    
-    public boolean borrowBook(String bookId) {
-        if (canBorrowBooks()) {
-            borrowedBooks.add(bookId);
-            return true;
-        }
-        return false;
-    }
-    
-    public boolean returnBook(String bookId) {
-        return borrowedBooks.remove(bookId);
-    }
-    
-    public int getRemainingBookQuota() {
-        return MAX_BOOKS_ALLOWED - borrowedBooks.size();
-    }
-    
+
     @Override
     public String getUserType() {
         return "STUDENT";
     }
-    
+
+    @Override
+    public boolean canBorrowBooks() {
+        return true;  // No limit on book borrowing
+    }
+
+    // Method to borrow a book (no quota check)
+    public boolean borrowBook(String bookId) {
+        borrowedBooks.add(bookId);
+        System.out.println("Book borrowed. Total borrowed books: " + borrowedBooks.size());  // Debug print
+        return true;
+    }
+
+    // Method to return a book
+    public boolean returnBook(String bookId) {
+        if (borrowedBooks.contains(bookId)) {
+            borrowedBooks.remove(bookId);  // Remove the book from the borrowed list
+            return true;
+        }
+        return false;  // If the student has not borrowed this book
+    }
+
+    // Getter for borrowed books
+    public Set<String> getBorrowedBooks() {
+        return borrowedBooks;
+    }
+
+    // Getter for studentId
+    public String getStudentId() {
+        return studentId;
+    }
+
+    // Setter for studentId
+    public void setStudentId(String studentId) {
+        this.studentId = studentId;
+    }
+
+    // Getter for department
+    public String getDepartment() {
+        return department;
+    }
+
+    // Setter for department
+    public void setDepartment(String department) {
+        this.department = department;
+    }
+
     @Override
     public String toString() {
         return "Student{" +
-                "id='" + getId() + '\'' +
-                ", name='" + getName() + '\'' +
-                ", email='" + getEmail() + '\'' +
-                ", studentId='" + studentId + '\'' +
+                "studentId='" + studentId + '\'' +
                 ", department='" + department + '\'' +
                 ", borrowedBooks=" + borrowedBooks +
-                '}';
+                "} " + super.toString();
     }
-} 
+}
